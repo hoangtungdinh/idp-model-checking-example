@@ -11,17 +11,17 @@ vocabulary V{
     
     type Location constructed from {A, B, C, D}
     type GoToLocation = {A; B} isa Location
-    type MeasurableLocation = {A; B} isa Location
+    type InspectionLocation = {A; B} isa Location
     type PictureState constructed from {Taken, NotTaken}
     
-    type Action constructed from {GoTo(GoToLocation), TakePicture(MeasurableLocation), Noop}
+    type Action constructed from {GoTo(GoToLocation), TakePicture(InspectionLocation), Noop}
     
     // actions
     Plan(Time) : Action
     
     // state variables
     S_Location(Time) : Location
-    S_Picture(Time, MeasurableLocation) : PictureState
+    S_Picture(Time, InspectionLocation) : PictureState
 
 }
 
@@ -59,9 +59,9 @@ theory PolicyTheory: V{
 }
 
 theory AssumptionTheory: V{
-    ! t[Time] : ! l[MeasurableLocation] : (Plan(t) = TakePicture(l) & S_Location(t) = l) => S_Picture(Next(t), l) = Taken.
-    ! t[Time] : ! l[MeasurableLocation] : S_Picture(t, l) = Taken => S_Picture(Next(t), l) = Taken.
-    ! t[Time] : ! l[MeasurableLocation] : (S_Picture(t, l) = NotTaken & S_Picture(Next(t), l) = Taken) => (Plan(t) = TakePicture(l) & S_Location(t) = l).
+    ! t[Time] : ! l[InspectionLocation] : (Plan(t) = TakePicture(l) & S_Location(t) = l) => S_Picture(Next(t), l) = Taken.
+    ! t[Time] : ! l[InspectionLocation] : S_Picture(t, l) = Taken => S_Picture(Next(t), l) = Taken.
+    ! t[Time] : ! l[InspectionLocation] : (S_Picture(t, l) = NotTaken & S_Picture(Next(t), l) = Taken) => (Plan(t) = TakePicture(l) & S_Location(t) = l).
     
     ! t[Time] : ! l[GoToLocation] : Plan(t) = GoTo(l) & S_Location(t) ~= l => S_Location(Next(t)) ~= S_Location(t).
     ! t[Time] : ! l[GoToLocation] : Plan(t) = GoTo(l) & Plan(Next(t)) = GoTo(l) & Plan(Next(Next(t))) = GoTo(l) => S_Location(Next(Next(Next(t)))) = l.
@@ -69,7 +69,7 @@ theory AssumptionTheory: V{
 
 theory InitialTheory : V{    
     ! t[Time] : t = Start => S_Location(t) = D.
-    ! t[Time] : ! l[MeasurableLocation] : t = Start => S_Picture(t, l) = NotTaken.
+    ! t[Time] : ! l[InspectionLocation] : t = Start => S_Picture(t, l) = NotTaken.
 }
 
 //This theory can contain possible goals of a planning problem
