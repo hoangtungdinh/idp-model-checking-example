@@ -1,0 +1,93 @@
+/* The header LTCvocabulary is only supported in IDP 3.2.2 and above.*/
+
+vocabulary V{
+    
+    //These three are standard in planning problems: Time, an initial time and a successor function
+    //The header "LTCvocabulary" indicates among others that these three constructs will be present and what their meaning is.
+    type Time isa nat
+    Start: Time
+    Stop: Time
+    partial Next(Time):Time //The successor is partial since we will search for plans in a finite context. In that case, the last state has no successor anymore.
+    
+    type Location constructed from {A, B, C, D}
+    type GoToLocation = {A; B} isa Location
+    type MeasurableLocation = {A; B} isa Location
+    type PictureState constructed from {Taken, NotTaken}
+    
+    type Action constructed from {GoTo(GoToLocation), TakePicture(MeasurableLocation), Noop}
+    
+    // actions
+    Plan(Time) : Action
+    
+    // state variables
+    S_Location(Time) : Location
+    S_Picture(Time, MeasurableLocation) : PictureState
+
+}
+
+structure S:V{
+    Time = {0..9}
+    
+}
+
+//This theory simply tells how to interpret Start and Next 
+theory TimeTheory : V{
+    { 
+        Start = MIN[:Time].
+        Stop = MAX[:Time].
+        !t : Next(t) = t + 1 <- Time(t+1). //Next is incrementing as long as this stays within bounds
+    }
+}
+
+theory PolicyTheory: V{
+    !t[Time] : (S_Location(t) = D & S_Picture(t, A) = Taken & S_Picture(t, B) = NotTaken) => Plan(t) = GoTo(B).
+    !t[Time] : (S_Location(t) = B & S_Picture(t, A) = NotTaken & S_Picture(t, B) = NotTaken) => Plan(t) = TakePicture(B).
+    !t[Time] : (S_Location(t) = B & S_Picture(t, A) = NotTaken & S_Picture(t, B) = Taken) => Plan(t) = GoTo(A).
+    !t[Time] : (S_Location(t) = A & S_Picture(t, A) = Taken & S_Picture(t, B) = Taken) => Plan(t) = Noop.
+    !t[Time] : (S_Location(t) = D & S_Picture(t, A) = Taken & S_Picture(t, B) = Taken) => Plan(t) = Noop.
+    !t[Time] : (S_Location(t) = A & S_Picture(t, A) = Taken & S_Picture(t, B) = NotTaken) => Plan(t) = GoTo(B).
+    !t[Time] : (S_Location(t) = D & S_Picture(t, A) = NotTaken & S_Picture(t, B) = Taken) => Plan(t) = GoTo(A).
+    !t[Time] : (S_Location(t) = C & S_Picture(t, A) = NotTaken & S_Picture(t, B) = NotTaken) => Plan(t) = GoTo(A).
+    !t[Time] : (S_Location(t) = C & S_Picture(t, A) = NotTaken & S_Picture(t, B) = Taken) => Plan(t) = GoTo(A).
+    !t[Time] : (S_Location(t) = D & S_Picture(t, A) = NotTaken & S_Picture(t, B) = NotTaken) => Plan(t) = GoTo(B).
+    !t[Time] : (S_Location(t) = A & S_Picture(t, A) = NotTaken & S_Picture(t, B) = NotTaken) => Plan(t) = TakePicture(A).
+    !t[Time] : (S_Location(t) = B & S_Picture(t, A) = Taken & S_Picture(t, B) = Taken) => Plan(t) = Noop.
+    !t[Time] : (S_Location(t) = B & S_Picture(t, A) = Taken & S_Picture(t, B) = NotTaken) => Plan(t) = TakePicture(B).
+    !t[Time] : (S_Location(t) = A & S_Picture(t, A) = NotTaken & S_Picture(t, B) = NotTaken) => Plan(t) = TakePicture(A).
+    !t[Time] : (S_Location(t) = C & S_Picture(t, A) = Taken & S_Picture(t, B) = Taken) => Plan(t) = Noop.
+    !t[Time] : (S_Location(t) = C & S_Picture(t, A) = Taken & S_Picture(t, B) = NotTaken) => Plan(t) = GoTo(B).
+}
+
+theory AssumptionTheory: V{
+    ! t[Time] : ! l[MeasurableLocation] : (Plan(t) = TakePicture(l) & S_Location(t) = l) => S_Picture(Next(t), l) = Taken.
+    ! t[Time] : ! l[MeasurableLocation] : S_Picture(t, l) = Taken => S_Picture(Next(t), l) = Taken.
+    ! t[Time] : ! l[MeasurableLocation] : (S_Picture(t, l) = NotTaken & S_Picture(Next(t), l) = Taken) => (Plan(t) = TakePicture(l) & S_Location(t) = l).
+    
+    ! t[Time] : ! l[GoToLocation] : Plan(t) = GoTo(l) & S_Location(t) ~= l => S_Location(Next(t)) ~= S_Location(t).
+    ! t[Time] : ! l[GoToLocation] : Plan(t) = GoTo(l) & Plan(Next(t)) = GoTo(l) & Plan(Next(Next(t))) = GoTo(l) => S_Location(Next(Next(Next(t)))) = l.
+}
+
+theory InitialTheory : V{    
+    ! t[Time] : t = Start => S_Location(t) = D.
+    ! t[Time] : ! l[MeasurableLocation] : t = Start => S_Picture(t, l) = NotTaken.
+}
+
+//This theory can contain possible goals of a planning problem
+theory GoalTheory : V{
+    ! t[Time] : ~(S_Picture(t, A) = Taken & S_Picture(t, B) = Taken).
+}
+
+procedure main(){   
+    
+    combined = merge(TimeTheory, PolicyTheory)
+    combined = merge(combined, AssumptionTheory)
+    combined = merge(combined, InitialTheory)
+    combined = merge(combined, GoalTheory)
+    
+    S = calculatedefinitions(combined,S)
+    
+    //We can simply compute models of this theory:
+    printmodels(modelexpand(combined,S))
+    
+    
+}
