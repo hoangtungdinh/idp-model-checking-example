@@ -61,8 +61,7 @@ theory PolicyTheory: V{
 theory AssumptionTheory: V{
     ! t[Time] : ! l[InspectionLocation] : (Plan(t) = TakePicture(l) & S_Location(t) = l) => S_Picture(Next(t), l) = Taken.
     ! t[Time] : ! l[InspectionLocation] : S_Picture(t, l) = Taken => S_Picture(Next(t), l) = Taken.
-    ! t[Time] : ! l[InspectionLocation] : (S_Picture(t, l) = NotTaken & S_Picture(Next(t), l) = Taken) => (Plan(t) = TakePicture(l) & S_Location(t) = l).
-    
+       
     ! t[Time] : ! l[GoToLocation] : Plan(t) = GoTo(l) & S_Location(t) ~= l => S_Location(Next(t)) ~= S_Location(t).
     ! t[Time] : ! l[GoToLocation] : Plan(t) = GoTo(l) & Plan(Next(t)) = GoTo(l) & Plan(Next(Next(t))) = GoTo(l) => S_Location(Next(Next(Next(t)))) = l.
 }
